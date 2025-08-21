@@ -2,7 +2,6 @@ footballAnalysis/
 football/
 input_videos/
 output/
-*.pt
 *.avi
 __pycache__/
 *.pyc
