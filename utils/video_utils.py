@@ -50,7 +50,7 @@ def frames_to_video_bytes(frames, fps=30):
         with tempfile.NamedTemporaryFile(delete=False, suffix=".mp4") as tmp_file:
             tmp_file_path = tmp_file.name
 
-        # Try H.264, fallback to mp4v
+
         fourcc = cv2.VideoWriter_fourcc(*"avc1")
         out = cv2.VideoWriter(tmp_file_path, fourcc, fps, (width, height))
 
@@ -90,7 +90,7 @@ def process_video(
     fast_mode=True,
 ):
     """Process a video using cached models and optimizations."""
-    import tempfile, os, numpy as np
+
 
     tmp_file_path = None
     try:
@@ -123,10 +123,9 @@ def process_video(
         team_assigner.team_colors = {}
         team_assigner.player_team_dict = {}
 
-        # ✅ Adapt player-ball distance threshold by resolution
+        # Adapt player-ball distance threshold by resolution
         frame_h, frame_w = video_frames[0].shape[:2]
-        player_ball_assigner.max_player_ball_distance = max(50, int(frame_w * 0.05))
-        print(f"Using max_player_ball_distance={player_ball_assigner.max_player_ball_distance}")
+        player_ball_assigner.max_player_ball_distance = max(70, int(frame_w * 0.05))
 
         # ---------------- Player + Team Processing ----------------
         if "players" in tracks and tracks["players"]:

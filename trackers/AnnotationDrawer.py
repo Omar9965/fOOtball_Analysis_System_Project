@@ -87,7 +87,7 @@ class AnnotationDrawer:
             line_height = 35
         else:  
             rect_x1, rect_y1, rect_x2, rect_y2 = int(w*0.55), int(h*0.85), int(w*0.9), int(h*0.97)
-            font_scale = max(0.8, w / 1920)  # cap font scaling
+            font_scale = max(0.8, w / 1920)  
             line_height = int(40 * font_scale)
 
         # Semi-transparent rectangle
