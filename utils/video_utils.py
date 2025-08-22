@@ -123,8 +123,12 @@ def process_video(
         team_assigner.team_colors = {}
         team_assigner.player_team_dict = {}
 
+        # ✅ Adapt player-ball distance threshold by resolution
+        frame_h, frame_w = video_frames[0].shape[:2]
+        player_ball_assigner.max_player_ball_distance = max(50, int(frame_w * 0.05))
+        print(f"Using max_player_ball_distance={player_ball_assigner.max_player_ball_distance}")
 
-
+        # ---------------- Player + Team Processing ----------------
         if "players" in tracks and tracks["players"]:
             first_players = tracks["players"][0]
 
@@ -134,6 +138,7 @@ def process_video(
 
                 frame_step = 3 if fast_mode else 1
 
+                # Assign teams to players in sampled frames
                 for frame_num in range(0, len(tracks["players"]), frame_step):
                     player_track = tracks["players"][frame_num]
                     for player_id, track in player_track.items():
@@ -159,28 +164,47 @@ def process_video(
                                     team_assigner.team_colors[team]
                                 )
 
-
+            # ---------------- Ball Control Processing ----------------
             team_ball_control = []
-            # Ball control assignment
             for frame_num, player_track in enumerate(tracks["players"]):
-                ball_bbox = tracks["ball"][frame_num][1]["bbox"]
+                ball_data = tracks["ball"][frame_num]
+                if not ball_data or 1 not in ball_data:
+                    # No ball detected → carry over last possession
+                    team_ball_control.append(team_ball_control[-1] if team_ball_control else 1)
+                    continue
+
+                ball_bbox = ball_data[1]["bbox"]
                 assigned_player = player_ball_assigner.assign_ball_to_player(
                     player_track, ball_bbox
                 )
 
                 if assigned_player != -1:
-                    tracks['players'][frame_num][assigned_player]['has_ball'] = True
-                    player_team = tracks['players'][frame_num][assigned_player].get('team', 1)
+                    tracks["players"][frame_num][assigned_player]["has_ball"] = True
+                    player_team = tracks["players"][frame_num][assigned_player].get("team")
+
+                    if player_team is None:
+                        # If missing → backfill from dictionary
+                        player_team = team_assigner.player_team_dict.get(assigned_player, 1)
+
                     team_ball_control.append(player_team)
                 else:
+                    # No player close enough → carry last team
                     team_ball_control.append(team_ball_control[-1] if team_ball_control else 1)
 
         else:
             # No players detected → default control to team 1
             team_ball_control = [1] * len(video_frames)
 
+        # ---------------- Sync Ball Control Length ----------------
+        if len(team_ball_control) < len(video_frames):
+            last_team = team_ball_control[-1] if team_ball_control else 1
+            team_ball_control.extend([last_team] * (len(video_frames) - len(team_ball_control)))
+        elif len(team_ball_control) > len(video_frames):
+            team_ball_control = team_ball_control[:len(video_frames)]
+
         team_ball_control = np.array(team_ball_control)
 
+        # ---------------- Draw Annotations ----------------
         print("Drawing annotations...")
         output_video_frames = tracker.draw_annotations(video_frames, tracks, team_ball_control)
 

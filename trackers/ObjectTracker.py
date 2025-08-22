@@ -4,7 +4,7 @@ class ObjectTracker:
     def __init__(self):
         self.tracker = sv.ByteTrack()
 
-    def get_object_tracks(self, frames, detections, read_from_stub=False, stub_path=None):
+    def get_object_tracks(self, frames, detections):
         tracks={
             "players":[],
             "referees":[],

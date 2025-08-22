@@ -69,41 +69,52 @@ class AnnotationDrawer:
     def draw_team_ball_control(self, frame, frame_num, team_ball_control):
         h, w, _ = frame.shape
 
-        # Adjust rectangle & text positions based on resize width
-        if w == 640: 
+        # Ensure numpy array
+        team_ball_control = np.array(team_ball_control)
+
+        # Handle case where frame_num >= len(team_ball_control)
+        if frame_num >= len(team_ball_control):
+            return frame
+
+        # Rectangle & text scaling
+        if w <= 640: 
             rect_x1, rect_y1, rect_x2, rect_y2 = 200, int(h * 0.8), 550, int(h * 0.95)
             font_scale = 0.5
-        elif w == 1280: 
+            line_height = 25
+        elif w <= 1280: 
             rect_x1, rect_y1, rect_x2, rect_y2 = 700, int(h * 0.85), 1160, int(h * 0.97)
             font_scale = 1
+            line_height = 35
         else:  
-            # Default for larger frames (e.g. 1920 width)
             rect_x1, rect_y1, rect_x2, rect_y2 = int(w*0.55), int(h*0.85), int(w*0.9), int(h*0.97)
-            font_scale = w / 1280  # scale text with resolution
+            font_scale = max(0.8, w / 1920)  # cap font scaling
+            line_height = int(40 * font_scale)
 
-        # Draw semi-transparent rectangle
+        # Semi-transparent rectangle
         overlay = frame.copy()
         cv2.rectangle(overlay, (rect_x1, rect_y1), (rect_x2, rect_y2), (255, 255, 255), -1)
         alpha = 0.4
         cv2.addWeighted(overlay, alpha, frame, 1 - alpha, 0, frame)
 
-        # Ball control calculations
+        # Ball control calculation
         team_ball_control_till_frame = team_ball_control[:frame_num+1]
-        team_1_num_frames = (team_ball_control_till_frame == 1).sum()
-        team_2_num_frames = (team_ball_control_till_frame == 2).sum()
+        team_1_num_frames = np.sum(team_ball_control_till_frame == 1)
+        team_2_num_frames = np.sum(team_ball_control_till_frame == 2)
 
-        if (team_1_num_frames + team_2_num_frames) == 0:
+        total_frames = team_1_num_frames + team_2_num_frames
+        if total_frames == 0:
             team_1, team_2 = 0, 0
         else:
-            team_1 = team_1_num_frames / (team_1_num_frames + team_2_num_frames)
-            team_2 = team_2_num_frames / (team_1_num_frames + team_2_num_frames)
+            team_1 = team_1_num_frames / total_frames
+            team_2 = team_2_num_frames / total_frames
 
-        # Draw text
-        cv2.putText(frame, f"Team 1 Ball Control: {team_1*100:.2f}%",
+        # Text positions (line height adapts)
+        cv2.putText(frame, f"Team 1 Ball Control: {team_1*100:.1f}%",
                     (rect_x1 + 10, rect_y1 + 30),
                     cv2.FONT_HERSHEY_SIMPLEX, font_scale, (0, 0, 0), 2)
-        cv2.putText(frame, f"Team 2 Ball Control: {team_2*100:.2f}%",
-                    (rect_x1 + 10, rect_y1 + 65),
+
+        cv2.putText(frame, f"Team 2 Ball Control: {team_2*100:.1f}%",
+                    (rect_x1 + 10, rect_y1 + 30 + line_height),
                     cv2.FONT_HERSHEY_SIMPLEX, font_scale, (0, 0, 0), 2)
 
         return frame
